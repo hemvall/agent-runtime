@@ -1,49 +1,87 @@
-# PR Learning Quiz
+# Explain Diff
 
-The project is intentionally built as a learning exercise. Every meaningful PR should include a **Learning Review** comment explaining what changed, why the design was chosen, and what concepts should be understood before merging.
+This project uses an **Explain Diff** learning loop for every meaningful pull request.
 
-## Workflow
+The goal is not to accumulate static quiz answers. The goal is to slow implementation down until the author can explain the code that was just added.
 
-1. Read the issue before looking at the implementation.
-2. Review the PR diff.
-3. Read the Learning Review comment.
-4. Answer the PR quiz **without looking at the answers or asking an AI first**.
-5. If an answer is unclear, revisit the relevant code.
-6. Merge only when you can explain the important design choices in your own words.
+## Session format
 
-## Bootstrap runtime contracts and CLI
+### 1. Background
 
-### Questions
+Before the quiz, establish what problem the change solves and where it fits in the system.
 
-1. Why does the runtime define a `ModelAdapter` instead of importing one LLM SDK directly everywhere?
-2. What problem does `AgentDecision` solve compared with asking the model to return arbitrary prose?
-3. Why are `ToolCall` and `ToolResult` two different models?
-4. What does `extra="forbid"` protect us from?
-5. Why does a `tool` decision require `tool_call`, while a `complete` decision requires `final_answer`?
-6. Why is `DemoModelAdapter` deterministic?
-7. Which part of this PR is the actual orchestration loop?
-8. If we replace one LLM provider with another later, which abstraction should isolate most of that change?
-9. What should happen if model output does not satisfy the contract?
-10. Why is issue #2 deliberately separate from this bootstrap work?
+For the bootstrap change:
 
-### Practical challenge
+- We are building an agent runtime, not an LLM wrapper.
+- The runtime will eventually own state, tool execution, persistence, retries, approvals and recovery.
+- The model is one component that proposes a next decision.
 
-Without modifying the contracts, implement a second fake adapter in a test that returns:
+### 2. Intuition
+
+Build a mental model before discussing individual lines:
 
 ```text
-kind = complete
-final_answer = "42"
+Goal
+  ↓
+Runtime
+  ↓
+ModelAdapter
+  ↓
+LLM
+  ↓
+validated AgentDecision
+  ↓
+Runtime decides what happens next
 ```
 
-Then explain why the CLI does not need to know which adapter produced the decision.
+The key invariant is:
 
-## Rule for future PRs
+> The model proposes. The runtime controls.
 
-Each major PR should add its own quiz section here or in a dedicated file under `learning/`, and the PR conversation should contain a Learning Review with:
+### 3. Code walkthrough
 
-- mental model;
-- important files;
-- design choices;
-- failure modes;
-- what to remember;
-- quiz questions.
+Walk through the actual PR diff, focusing on why each boundary exists rather than narrating syntax.
+
+For this change:
+
+- `runtime/contracts.py` defines the typed language crossing the model/runtime boundary.
+- `runtime/model.py` isolates provider-specific model integration behind `ModelAdapter`.
+- `runtime/cli.py` is only an entry point; it is deliberately not an orchestration loop.
+- `tests/` encode invariants such as rejecting incomplete or unexpected decisions.
+- `pyproject.toml` makes the package installable and exposes the CLI.
+
+### 4. Interactive quiz
+
+The quiz happens **interactively**, not as a list with answers in this repository.
+
+Rules:
+
+1. Ask exactly five medium-difficulty free-response questions.
+2. Ask one question at a time.
+3. Wait for the learner's answer before continuing.
+4. Evaluate the reasoning, not exact wording.
+5. If the answer exposes a misunderstanding, explain that gap and ask a targeted follow-up before moving on.
+6. Prefer questions about architectural consequences and failure modes over syntax trivia.
+7. Do not reveal all questions or answers upfront.
+
+### 5. Completion
+
+The Explain Diff session is complete when the learner can explain:
+
+- what problem the PR solves;
+- how data/control flows through the changed code;
+- why the chosen abstractions exist;
+- at least one plausible failure mode;
+- how this PR prepares the next step.
+
+## Bootstrap change: concepts to probe
+
+The interactive session for this PR should test understanding of:
+
+- why `ModelAdapter` is a boundary rather than the orchestrator;
+- why LLM output is validated into domain contracts;
+- the difference between `ToolCall` and `ToolResult`;
+- why malformed model output must fail before execution;
+- why the actual observe → decide → act loop belongs in the next issue.
+
+Do not store model answers here. The learner should reconstruct the explanation from the code and discussion each time.
