@@ -21,6 +21,13 @@ class ToolResult(BaseModel):
     error: str | None = None
 
 
+class Observation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step: int = Field(ge=1)
+    result: ToolResult
+
+
 class AgentDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
