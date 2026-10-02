@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 from runtime.contracts import Observation, ToolResult
 from runtime.model import ModelAdapter
+from runtime.state import RunState, RunStateMachine, StateTransition
 from runtime.tools import ToolRegistry
 
 
@@ -15,15 +16,25 @@ class StepBudgetExceeded(RuntimeError):
 class RunResult:
     final_answer: str
     observations: list[Observation] = field(default_factory=list)
+    state: RunState = RunState.COMPLETED
+    transitions: list[StateTransition] = field(default_factory=list)
 
 
 def run_agent(goal: str, model: ModelAdapter, tools: ToolRegistry, max_steps: int = 10) -> RunResult:
     observations: list[Observation] = []
+    machine = RunStateMachine()
+    machine.transition(RunState.RUNNING, "run started")
 
     for step in range(1, max_steps + 1):
         decision = model.decide(goal, observations)
         if decision.kind == "complete":
-            return RunResult(final_answer=decision.final_answer or "", observations=observations)
+            machine.transition(RunState.COMPLETED, "agent completed the goal")
+            return RunResult(
+                final_answer=decision.final_answer or "",
+                observations=observations,
+                state=machine.state,
+                transitions=list(machine.history),
+            )
 
         call = decision.tool_call
         if call is None:
@@ -37,4 +48,5 @@ def run_agent(goal: str, model: ModelAdapter, tools: ToolRegistry, max_steps: in
 
         observations.append(Observation(step=step, result=result))
 
+    machine.transition(RunState.FAILED, f"step budget exceeded: max_steps={max_steps}")
     raise StepBudgetExceeded(f"agent exceeded max_steps={max_steps}")

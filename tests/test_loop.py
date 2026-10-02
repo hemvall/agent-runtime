@@ -3,6 +3,7 @@ import pytest
 from runtime.contracts import AgentDecision, Observation, ToolCall
 from runtime.loop import StepBudgetExceeded, run_agent
 from runtime.model import ModelAdapter
+from runtime.state import RunState
 from runtime.tools import ToolRegistry
 
 
@@ -24,6 +25,11 @@ def test_agent_executes_tool_then_completes() -> None:
     result = run_agent("test", model, tools)
     assert result.final_answer == "done"
     assert result.observations[0].result.output == "hello"
+    assert result.state is RunState.COMPLETED
+    assert [(item.previous_state, item.next_state) for item in result.transitions] == [
+        (RunState.PENDING, RunState.RUNNING),
+        (RunState.RUNNING, RunState.COMPLETED),
+    ]
 
 
 def test_unknown_tool_becomes_observation_and_agent_can_recover() -> None:
