@@ -1,0 +1,12 @@
+[
+  {"id":"read-config","goal":"Read config and report port","expected":"port"},
+  {"id":"fix-test","goal":"Fix one failing unit test","expected":"passed"},
+  {"id":"unknown-tool","goal":"Recover from an unavailable tool","expected":"recovered"},
+  {"id":"approval","goal":"Prepare a protected deployment","expected":"approval"},
+  {"id":"resume","goal":"Resume an interrupted task","expected":"resumed"},
+  {"id":"timeout","goal":"Handle a tool timeout","expected":"timeout"},
+  {"id":"budget","goal":"Stop a repeated-action loop","expected":"budget"},
+  {"id":"artifact","goal":"Produce an artifact reference","expected":"artifact"},
+  {"id":"replan","goal":"Replan after a failed assumption","expected":"replanned"},
+  {"id":"event","goal":"Wait for and consume an event","expected":"event"}
+]
